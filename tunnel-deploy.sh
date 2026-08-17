@@ -329,8 +329,17 @@ setLocal("0.0.0.0:53")
 newServer({address="127.0.0.1:${DNSTT_PORT}", pool="dnstt"})
 newServer({address="127.0.0.1:${SLIPSTREAM_PORT}", pool="slipstream"})
 
-addAction(SuffixMatchNode({"${DNSTT_SUBDOMAIN}."}), PoolAction("dnstt"))
-addAction(SuffixMatchNode({"${SLIPSTREAM_SUBDOMAIN}."}), PoolAction("slipstream"))
+-- dnsdist < 1.9.0 (this is what Ubuntu 24.04's apt package ships, 1.8.3)
+-- does not have a global SuffixMatchNode() selector function — that only
+-- works from 1.9.0 onward. On 1.8.x you must build a class:SuffixMatchNode
+-- object with newSuffixMatchNode() and pass it to SuffixMatchNodeRule().
+local dnstt_smn = newSuffixMatchNode()
+dnstt_smn:add("${DNSTT_SUBDOMAIN}.")
+addAction(SuffixMatchNodeRule(dnstt_smn), PoolAction("dnstt"))
+
+local slipstream_smn = newSuffixMatchNode()
+slipstream_smn:add("${SLIPSTREAM_SUBDOMAIN}.")
+addAction(SuffixMatchNodeRule(slipstream_smn), PoolAction("slipstream"))
 
 -- Anything not matching either tunnel subdomain is dropped rather than
 -- silently forwarded anywhere, since this box is not meant to be an
